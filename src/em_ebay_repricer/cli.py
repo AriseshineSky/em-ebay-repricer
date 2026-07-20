@@ -7,7 +7,7 @@ import os
 
 import click
 
-from runtime import get_config, logger
+from em_ebay_repricer.runtime import get_config, logger
 from em_ebay_repricer.es_client import EsProductClient
 from em_ebay_repricer.pipeline import run_tiers
 from em_ebay_repricer.price_calculator import PriceCalculator

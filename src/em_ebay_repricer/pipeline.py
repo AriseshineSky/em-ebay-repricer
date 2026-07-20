@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from runtime import logger
+from em_ebay_repricer.runtime import logger
 from em_ebay_repricer.gcs_helper import GCSHelper
 from em_ebay_repricer.sources import (
     TIER_ADS,

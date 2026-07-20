@@ -6,7 +6,7 @@ import time
 from google.api_core.retry import Retry
 from google.cloud import storage
 
-from runtime import logger
+from em_ebay_repricer.runtime import logger
 
 
 class GCSHelper:

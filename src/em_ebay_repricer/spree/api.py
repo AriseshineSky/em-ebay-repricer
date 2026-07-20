@@ -6,7 +6,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
-from runtime import logger
+from em_ebay_repricer.runtime import logger
 
 
 class SpreeApi:

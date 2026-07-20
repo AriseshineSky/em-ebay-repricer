@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from runtime import logger
+from em_ebay_repricer.runtime import logger
 from em_ebay_repricer.spree.api import SpreeApi
 
 

@@ -7,7 +7,7 @@ import time
 
 import dateparser
 
-from runtime import logger
+from em_ebay_repricer.runtime import logger
 from em_ebay_repricer.ebay_products_filter import EbayProductsFilterPipeline
 
 

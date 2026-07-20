@@ -22,9 +22,6 @@ em-ebay-repricer = "em_ebay_repricer.cli:reprice"
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-py-modules = ["runtime"]
-
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["em_ebay_repricer*"]
