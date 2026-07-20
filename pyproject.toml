@@ -1,0 +1,21 @@
+[project]
+name = "ebay-reprice-export"
+version = "0.1.0"
+description = "Export Ebay catalog vs calculated reprice CSV from em-catalog + ebay_us_products"
+requires-python = ">=3.12"
+dependencies = [
+  "click>=8.1",
+  "dateparser>=1.2",
+  "psycopg2-binary>=2.9",
+  "requests>=2.31",
+]
+
+[project.scripts]
+ebay-reprice-export = "ebay_reprice_export.cli:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
