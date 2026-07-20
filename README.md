@@ -1,50 +1,42 @@
-# ebay-reprice-export
+# em-ebay-repricer
 
-Standalone tool that compares **catalog** (Postgres `product_sources` + `product_catalogs`) with **calculated** Ebay offers from Elasticsearch (`ebay_{marketplace}_products`) and writes an audit CSV.
+Standalone **Ebay Spree repricer**: read product IDs from **cart / ads / catalog**, load Ebay offers from Elasticsearch, calculate prices, and write Spree `set_offers`.
 
-It does **not** update any store / Spree inventory.
+Mirrors the [em-amz-repricer](https://github.com/AriseshineSky) three-tier pattern. Does **not** enqueue crawler Redis URLs (that is offers-update, not reprice).
 
-## Requirements
+## Data sources
 
-- Python 3.12+
-- Postgres catalog DB with `product_sources` and `product_catalogs`
-- Elasticsearch index such as `ebay_us_products` (document `_id` = Ebay item id)
+| Tier | Source |
+|------|--------|
+| cart | `gs://em-bucket/em-analytics/carts/sources/EBAY_{MP}.txt` |
+| ads | `gs://em-bucket/em-analytics/sources/EBAY_{MP}.txt` |
+| catalog | Postgres `product_sources` (`Ebay_{MP}`) + `product_catalogs` |
+
+ES index: `ebay_{marketplace}_products` (document `_id` = Ebay item id).
 
 ## Setup
 
 ```bash
-cp config.example.ini config.ini
-# edit config.ini with your Postgres + Elasticsearch credentials
+cp config.example.ini ~/.em_ebay_repricer/config.ini
+# fill PG, ES, and Spree credentials
+# place GCS service account at ~/.em_ebay_repricer/gcs-sa.json (for cart/ads)
 
 uv venv .venv
 uv pip install -e .
-# or: pip install -e .
 ```
 
 ## Usage
 
 ```bash
-# smoke test
-ebay-reprice-export -m us -t 30 -l 500 -o reports/smoke.csv --config config.ini
+# dry-run catalog only
+em-ebay-repricer -s em-spree -m us --tiers catalog --dry-run --limit 100
 
-# full export
-ebay-reprice-export -m us -t 30 -o reports/ebay_us_reprice_export_full.csv --config config.ini
+# live reprice all tiers
+em-ebay-repricer -s em-spree -m us --tiers cart,ads,catalog \
+  -g ~/.em_ebay_repricer/gcs-sa.json
 ```
 
-Environment alternatives:
-
-- `EBAY_REPRICE_CONFIG=/path/to/config.ini`
-- `CATALOG_DATABASE_URL=postgresql://...` (overrides `[pg_db]` DSN pieces)
-
-## CSV columns
-
-| Column | Source |
-|--------|--------|
-| `product_id`, `source_product_id`, `handle`, `variant_id` | Postgres |
-| `catalog_price`, `catalog_availability` | `product_catalogs` (current site) |
-| `ebay_price`, `ebay_shipping_fee`, `ebay_available_qty`, `ebay_existence`, `ebay_date` | Elasticsearch |
-| `calculated_price`, `calculated_quantity`, `calculated_availability` | filter + price calculator |
-| `filter_passed`, `filter_reason`, `expired` | diagnostics |
+Config path: `EM_EBAY_REPRICER_CONFIG` or `~/.em_ebay_repricer/config.ini` or `./config.ini`.
 
 ## License
 

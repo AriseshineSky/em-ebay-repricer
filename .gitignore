@@ -4,6 +4,7 @@ __pycache__/
 .pytest_cache/
 reports/
 *.csv
+tmp/
 uv.lock
 dist/
 *.egg-info/
@@ -11,3 +12,5 @@ config.ini
 .env
 .env.*
 !.env.example
+gcs-sa.json
+*-sa.json

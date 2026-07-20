@@ -1,21 +1,30 @@
 [project]
-name = "ebay-reprice-export"
+name = "em-ebay-repricer"
 version = "0.1.0"
-description = "Export Ebay catalog vs calculated reprice CSV from em-catalog + ebay_us_products"
-requires-python = ">=3.12"
+description = "EveryMarket Ebay Spree repricing from cart, ads, and catalog sources"
+readme = "README.md"
+requires-python = ">=3.11"
 dependencies = [
   "click>=8.1",
   "dateparser>=1.2",
+  "google-cloud-storage>=2.14",
+  "peewee>=3.17",
   "psycopg2-binary>=2.9",
+  "pymysql>=1.1",
   "requests>=2.31",
+  "urllib3<2",
 ]
 
 [project.scripts]
-ebay-reprice-export = "ebay_reprice_export.cli:main"
+em-ebay-repricer = "em_ebay_repricer.cli:reprice"
 
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["runtime"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["em_ebay_repricer*"]
