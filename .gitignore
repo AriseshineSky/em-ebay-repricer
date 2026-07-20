@@ -7,3 +7,7 @@ reports/
 uv.lock
 dist/
 *.egg-info/
+config.ini
+.env
+.env.*
+!.env.example

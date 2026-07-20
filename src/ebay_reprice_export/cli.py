@@ -9,7 +9,7 @@ import sys
 
 import click
 
-from .config import load_em_celery_config
+from .config import load_config
 from .es_client import EsProductClient
 from .exporter import EbayRepricerExporter
 from .price_calculator import PriceCalculator
@@ -25,16 +25,16 @@ def _setup_logging():
 
 @click.command("ebay-reprice-export")
 @click.option("-m", "--marketplace", type=str, default="us")
-@click.option("-t", "--ttl", type=int, default=30)
+@click.option("-t", "--ttl", type=int, default=30, help="Treat ES docs older than N days as expired.")
 @click.option("-o", "--output", type=str, default=None)
-@click.option("-l", "--limit", type=int, default=0, help="0 = all")
+@click.option("-l", "--limit", type=int, default=0, help="Limit rows (0 = all).")
 @click.option("--batch-size", type=int, default=250)
-@click.option("--config", "config_path", type=str, default=None)
+@click.option("--config", "config_path", type=str, default=None, help="Path to config.ini")
 def main(marketplace, ttl, output, limit, batch_size, config_path):
-  """Export catalog vs calculated Ebay offers to CSV (no Spree writes)."""
+  """Export catalog vs calculated Ebay offers to CSV (no store writes)."""
   _setup_logging()
   marketplace = marketplace.lower()
-  cfg = load_em_celery_config(config_path)
+  cfg = load_config(config_path)
 
   pg_config = cfg.get("pg_db")
   if not pg_config:
@@ -53,14 +53,14 @@ def main(marketplace, ttl, output, limit, batch_size, config_path):
       pass
 
   if not output:
-    output = "/tmp/ebay_{}_reprice_export_{}.csv".format(
+    output = "ebay_{}_reprice_export_{}.csv".format(
       marketplace, datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     )
   output = os.path.abspath(os.path.expanduser(output))
 
   product_service = EsProductClient(
     product_cfg["host"],
-    product_cfg.get("port", "80"),
+    product_cfg.get("port", "9200"),
     product_cfg["user"],
     product_cfg["password"],
   )
