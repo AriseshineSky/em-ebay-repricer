@@ -135,7 +135,7 @@ def apply_prices(
         error=error,
         dry_run=dry_run,
         plan=False,
-        tiers=["all"],
+        tiers=["cart", "ads", "catalog"],
     )
     logger.info(
         "[EbayRepricerApplyDone] dry_run=%s seen=%s updated=%s failed=%s",
