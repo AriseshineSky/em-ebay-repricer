@@ -21,7 +21,7 @@ ES index: `ebay_{marketplace}_products` (document `_id` = Ebay item id).
 ```bash
 cp config.example.ini ~/.em_ebay_repricer/config.ini
 # fill PG, ES, and Spree credentials
-# place GCS service account at ~/.em_ebay_repricer/gcs-sa.json (for cart/ads)
+# GCS SA defaults to ~/.em_celery/gcs-sa.json (for cart/ads)
 
 uv venv .venv
 uv pip install -e .
@@ -39,7 +39,7 @@ em-ebay-repricer-apply -s em-spree -m us
 
 # live (calc + set_offers in one process)
 em-ebay-repricer -s em-spree -m us --tiers cart,ads,catalog \
-  -g ~/.em_ebay_repricer/gcs-sa.json
+  -g ~/.em_celery/gcs-sa.json
 ```
 
 Config path: `EM_EBAY_REPRICER_CONFIG` or `~/.em_ebay_repricer/config.ini` or `./config.ini`.

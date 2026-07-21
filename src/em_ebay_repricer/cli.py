@@ -14,7 +14,7 @@ from em_ebay_repricer.repricer import EbayRepricer
     "-g",
     "--gcs_service_account_path",
     type=str,
-    default="~/.em_ebay_repricer/gcs-sa.json",
+    default="~/.em_celery/gcs-sa.json",
     show_default=True,
 )
 @click.option("-m", "--marketplace", type=str, default="us", show_default=True)
