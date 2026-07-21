@@ -17,6 +17,8 @@ dependencies = [
 
 [project.scripts]
 em-ebay-repricer = "em_ebay_repricer.cli:reprice"
+em-ebay-repricer-plan = "em_ebay_repricer.plan_cli:plan_prices"
+em-ebay-repricer-apply = "em_ebay_repricer.apply_cli:apply_prices"
 
 [build-system]
 requires = ["setuptools>=68"]

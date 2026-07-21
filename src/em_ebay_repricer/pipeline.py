@@ -6,13 +6,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from em_ebay_repricer.runtime import logger
 from em_ebay_repricer.gcs_helper import GCSHelper
+from em_ebay_repricer.runtime import logger
 from em_ebay_repricer.sources import (
     TIER_ADS,
     TIER_CART,
     TIER_CATALOG,
-    CatalogEbayProductsSource,
     SeedFileDataSource,
 )
 
@@ -42,6 +41,18 @@ def extract_ids(record):
     )
 
 
+def _snapshot_stats(repricer):
+    return {
+        "products_cnt": int(repricer.stats.get("products_cnt", 0) or 0),
+        "updated_cnt": int(repricer.stats.get("updated_cnt", 0) or 0),
+        "planned_cnt": int(repricer.stats.get("planned_cnt", 0) or 0),
+        "skipped_price": int(repricer.stats.get("skipped_price", 0) or 0),
+        "skipped_fresh": int(repricer.stats.get("skipped_fresh", 0) or 0),
+        "skipped_incomplete": int(repricer.stats.get("skipped_incomplete", 0) or 0),
+        "skipped_discontinued": int(repricer.stats.get("skipped_discontinued", 0) or 0),
+    }
+
+
 def run_tiers(
     tiers,
     marketplace,
@@ -59,18 +70,21 @@ def run_tiers(
         cart_gcs = GCSHelper(gcs_service_account_path, BUCKET_NAME, "em-analytics/carts")
         ads_gcs = GCSHelper(gcs_service_account_path, BUCKET_NAME, "em-analytics")
 
+    tier_stats = {}
+
     for tier in tiers:
         logger.info("[TierStart] %s marketplace=%s", tier, marketplace_key)
+        before = _snapshot_stats(repricer)
         processed = 0
         batch = {}
         batch_lookup_pids = []
         batch_lookup_spids = []
+        repricer.active_tier = tier
 
         def flush():
             nonlocal batch, batch_lookup_pids, batch_lookup_spids, processed
             if not batch and not batch_lookup_pids and not batch_lookup_spids:
                 return
-            # Enrich incomplete rows from PG
             need_pid = [p for p in batch_lookup_pids if p]
             need_spid = [s for s in batch_lookup_spids if s]
             lookup = catalog_source.lookup_by_ids(
@@ -78,69 +92,110 @@ def run_tiers(
             )
             enriched = {}
             for key, stub in list(batch.items()):
-                prod = lookup.get(stub.get("product_id") or "") or lookup.get(
-                    stub.get("source_product_id") or ""
-                ) or lookup.get(key)
+                prod = (
+                    lookup.get(stub.get("product_id") or "")
+                    or lookup.get(stub.get("source_product_id") or "")
+                    or lookup.get(key)
+                )
                 if prod:
                     enriched[prod["source_product_id"]] = prod
-                elif stub.get("source_product_id") and stub.get("product_id") and stub.get("handle"):
+                elif (
+                    stub.get("source_product_id")
+                    and stub.get("product_id")
+                    and stub.get("handle")
+                ):
                     enriched[stub["source_product_id"]] = stub
-            repricer.process_batch(enriched)
+            repricer.process_batch(enriched, tier=tier)
             processed += len(enriched)
             batch = {}
             batch_lookup_pids = []
             batch_lookup_spids = []
 
         if tier == TIER_CATALOG:
-            for prod in catalog_source.iter_products(
-                marketplace_key, limit=limit
-            ):
+            for prod in catalog_source.iter_products(marketplace_key, limit=limit):
                 batch[prod["source_product_id"]] = prod
                 if len(batch) >= repricer.batch_size:
                     flush()
                 if limit and processed + len(batch) >= limit:
                     break
             flush()
-            logger.info("[TierDone] %s processed~=%s", tier, processed)
-            continue
-
-        if tier == TIER_CART:
+        elif tier == TIER_CART:
             blob = CART_SEED_BLOB_TEMPLATE.format(marketplace.upper())
             local = Path(LOCAL_CART_SEED_TEMPLATE.format(marketplace_key))
             source = download_seed(cart_gcs, blob, local)
+            if source is None:
+                logger.warning("[TierSkip] missing seed for %s (%s)", tier, blob)
+                tier_stats[tier] = {"processed": 0, "skipped_missing_file": True}
+                continue
+            for record in source.iter_products(marketplace_key):
+                pid, spid = extract_ids(record)
+                if not pid and not spid:
+                    continue
+                key = spid or pid
+                stub = {
+                    "product_id": pid or "",
+                    "source_product_id": spid or "",
+                    "handle": record.get("handle") or "",
+                    "variants": [],
+                }
+                if record.get("variant_id"):
+                    stub["variant_id"] = str(record["variant_id"])
+                    stub["variants"] = [{"variant_id": str(record["variant_id"])}]
+                batch[key] = stub
+                if pid:
+                    batch_lookup_pids.append(pid)
+                if spid:
+                    batch_lookup_spids.append(spid)
+                if len(batch) >= repricer.batch_size:
+                    flush()
+                if limit and processed + len(batch) >= limit:
+                    break
+            flush()
         elif tier == TIER_ADS:
             blob = ADS_SEED_BLOB_TEMPLATE.format(marketplace.upper())
             local = Path(LOCAL_ADS_SEED_TEMPLATE.format(marketplace_key))
             source = download_seed(ads_gcs, blob, local)
+            if source is None:
+                logger.warning("[TierSkip] missing seed for %s (%s)", tier, blob)
+                tier_stats[tier] = {"processed": 0, "skipped_missing_file": True}
+                continue
+            for record in source.iter_products(marketplace_key):
+                pid, spid = extract_ids(record)
+                if not pid and not spid:
+                    continue
+                key = spid or pid
+                stub = {
+                    "product_id": pid or "",
+                    "source_product_id": spid or "",
+                    "handle": record.get("handle") or "",
+                    "variants": [],
+                }
+                if record.get("variant_id"):
+                    stub["variant_id"] = str(record["variant_id"])
+                    stub["variants"] = [{"variant_id": str(record["variant_id"])}]
+                batch[key] = stub
+                if pid:
+                    batch_lookup_pids.append(pid)
+                if spid:
+                    batch_lookup_spids.append(spid)
+                if len(batch) >= repricer.batch_size:
+                    flush()
+                if limit and processed + len(batch) >= limit:
+                    break
+            flush()
         else:
             raise ValueError("Unknown tier: {}".format(tier))
 
-        if source is None:
-            logger.warning("[TierSkip] missing seed for %s (%s)", tier, blob)
-            continue
+        after = _snapshot_stats(repricer)
+        tier_stats[tier] = {
+            "processed": processed,
+            "products_cnt": after["products_cnt"] - before["products_cnt"],
+            "updated_cnt": after["updated_cnt"] - before["updated_cnt"],
+            "planned_cnt": after["planned_cnt"] - before["planned_cnt"],
+            "skipped_price": after["skipped_price"] - before["skipped_price"],
+            "skipped_fresh": after["skipped_fresh"] - before["skipped_fresh"],
+        }
+        logger.info("[TierDone] %s processed~=%s stats=%s", tier, processed, tier_stats[tier])
 
-        for record in source.iter_products(marketplace_key):
-            pid, spid = extract_ids(record)
-            if not pid and not spid:
-                continue
-            key = spid or pid
-            stub = {
-                "product_id": pid or "",
-                "source_product_id": spid or "",
-                "handle": record.get("handle") or "",
-                "variants": [],
-            }
-            if record.get("variant_id"):
-                stub["variant_id"] = str(record["variant_id"])
-                stub["variants"] = [{"variant_id": str(record["variant_id"])}]
-            batch[key] = stub
-            if pid:
-                batch_lookup_pids.append(pid)
-            if spid:
-                batch_lookup_spids.append(spid)
-            if len(batch) >= repricer.batch_size:
-                flush()
-            if limit and processed + len(batch) >= limit:
-                break
-        flush()
-        logger.info("[TierDone] %s processed~=%s", tier, processed)
+    repricer.active_tier = None
+    return tier_stats
