@@ -17,7 +17,9 @@ class SpreeApi:
         retries = Retry(
             total=7,
             backoff_factor=0.1,
-            status_forcelist=[429, 500, 502, 503, 504],
+            # Do not retry bare 500s: set_offers is not idempotent-friendly under
+            # load, and bad payloads (e.g. string prices) never recover by retry.
+            status_forcelist=[429, 502, 503, 504],
         )
         self.session = requests.Session()
         self.session.mount(self.endpoint, HTTPAdapter(max_retries=retries))
