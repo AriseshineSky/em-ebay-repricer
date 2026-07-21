@@ -73,6 +73,11 @@ def save_repricer_metrics(
         out_of_stock = int(stats.get("out_of_stock", 0) or 0)
         missing_es = int(stats.get("missing_es", 0) or 0)
         filtered = stats.get("filtered") or {}
+        if not isinstance(filtered, dict):
+            filtered = {}
+        filtered_cnt = int(stats.get("filtered_cnt", 0) or 0)
+        if filtered_cnt <= 0 and filtered:
+            filtered_cnt = sum(int(v or 0) for v in filtered.values())
 
         ordered_tiers = normalize_tiers(tiers)
         if not ordered_tiers and isinstance(tier_stats, dict) and tier_stats:
@@ -130,6 +135,7 @@ def save_repricer_metrics(
             "out_of_stock": out_of_stock,
             "missing_es": missing_es,
             "filtered": filtered,
+            "filtered_cnt": filtered_cnt,
             "tier_stats": tier_stats or {},
             "error": str(error) if error else None,
             "status": "failed" if error else "finished",

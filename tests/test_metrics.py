@@ -82,6 +82,8 @@ def test_save_repricer_metrics_plan_run():
     assert doc["skipped_fresh"] == 1
     assert doc["skipped_price"] == 2
     assert doc["plan_run_id"] == "abc123"
+    assert doc["filtered_cnt"] == 1
+    assert doc["filtered"] == {"NotAvailable": 1}
     assert doc["_id"].startswith("ebay_repricer_plan_us_ads_")
 
 

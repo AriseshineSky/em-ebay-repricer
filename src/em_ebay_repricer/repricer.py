@@ -71,6 +71,7 @@ class EbayRepricer:
             "products_cnt": 0,
             "expired_cnt": 0,
             "filtered": {},
+            "filtered_cnt": 0,
             "in_stock": 0,
             "out_of_stock": 0,
             "missing_es": 0,
@@ -117,6 +118,7 @@ class EbayRepricer:
                 self.stats["skipped_discontinued"] += 1
                 self.stats["filtered"].setdefault("Discontinued", 0)
                 self.stats["filtered"]["Discontinued"] += 1
+                self.stats["filtered_cnt"] += 1
                 continue
             if not prod.get("product_id") or not prod.get("handle") or not prod.get("variants"):
                 self.stats["skipped_incomplete"] += 1
@@ -140,6 +142,7 @@ class EbayRepricer:
 
             if filter_reason:
                 status = STATUS_FILTERED
+                self.stats["filtered_cnt"] += 1
             else:
                 old_price = current_catalog_price(prod)
                 new_price = offer.get("price") if isinstance(offer, dict) else None
