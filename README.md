@@ -1,6 +1,8 @@
 # em-ebay-repricer
 
-Standalone **Ebay Spree repricer**: read product IDs from **cart / ads / catalog**, load Ebay offers from Elasticsearch, calculate prices, and write Spree `set_offers`.
+Standalone **Ebay Spree repricer**: read product IDs from **cart / ads / catalog**, load Ebay offers from Elasticsearch, calculate prices into **`ebay_repricer_pending`**, then apply Spree `set_offers`.
+
+See [docs/REPRICING_FLOW.md](docs/REPRICING_FLOW.md) for plan/apply, freshness, and tier markers.
 
 Mirrors the [em-amz-repricer](https://github.com/AriseshineSky) three-tier pattern. Does **not** enqueue crawler Redis URLs (that is offers-update, not reprice).
 
@@ -28,10 +30,14 @@ uv pip install -e .
 ## Usage
 
 ```bash
-# dry-run catalog only
-em-ebay-repricer -s em-spree -m us --tiers catalog --dry-run --limit 100
+# plan (write pending only)
+em-ebay-repricer-plan -s em-spree -m us --tiers catalog --limit 100
 
-# live reprice all tiers
+# apply pending → Spree
+em-ebay-repricer-apply -s em-spree -m us --dry-run
+em-ebay-repricer-apply -s em-spree -m us
+
+# live (calc + set_offers in one process)
 em-ebay-repricer -s em-spree -m us --tiers cart,ads,catalog \
   -g ~/.em_ebay_repricer/gcs-sa.json
 ```

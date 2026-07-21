@@ -47,13 +47,15 @@ class CatalogEbayProductsSource:
 
     def iter_products(self, marketplace="us", limit=0):
         source = self._source_name(marketplace)
+        # Skip discontinued masters — they must not enter price calculation.
         query = (
             "SELECT ps.product_id, ps.source_product_id, ps.handle, "
-            "pc.variant_id, pc.price, pc.availability "
+            "pc.variant_id, pc.price, pc.availability, pc.discontinued "
             "FROM {} ps "
             "JOIN product_catalogs pc "
             "  ON pc.product_id = ps.product_id AND pc.is_master IS TRUE "
             "WHERE ps.source = %s "
+            "  AND COALESCE(pc.discontinued, FALSE) IS NOT TRUE "
             "ORDER BY ps.id"
         ).format(self.table_name)
         params = [source]
@@ -95,7 +97,7 @@ class CatalogEbayProductsSource:
         where_extra = " OR ".join(clauses)
         query = (
             "SELECT ps.product_id, ps.source_product_id, ps.handle, "
-            "pc.variant_id, pc.price, pc.availability "
+            "pc.variant_id, pc.price, pc.availability, pc.discontinued "
             "FROM {} ps "
             "JOIN product_catalogs pc "
             "  ON pc.product_id = ps.product_id AND pc.is_master IS TRUE "
@@ -108,15 +110,44 @@ class CatalogEbayProductsSource:
                 cur.execute(query, tuple(params))
                 for row in cur:
                     prod = self._row_to_product(row, source)
+                    if prod.get("discontinued"):
+                        continue
                     out[prod["product_id"]] = prod
                     out[prod["source_product_id"]] = prod
         finally:
             conn.close()
         return out
 
+    def discontinued_product_ids(self, product_ids):
+        """Return set of product_id strings whose master catalog row is discontinued."""
+        product_ids = [str(x) for x in (product_ids or []) if x not in (None, "")]
+        if not product_ids:
+            return set()
+        query = (
+            "SELECT product_id FROM product_catalogs "
+            "WHERE is_master IS TRUE "
+            "  AND COALESCE(discontinued, FALSE) IS TRUE "
+            "  AND product_id = ANY(%s::bigint[])"
+        )
+        conn = psycopg2.connect(build_pg_dsn(self.pg_config))
+        try:
+            with conn.cursor() as cur:
+                cur.execute(query, (product_ids,))
+                return {str(row[0]) for row in cur.fetchall()}
+        finally:
+            conn.close()
+
     @staticmethod
     def _row_to_product(row, source):
-        product_id, source_product_id, handle, variant_id, price, availability = row
+        (
+            product_id,
+            source_product_id,
+            handle,
+            variant_id,
+            price,
+            availability,
+            discontinued,
+        ) = row
         return {
             "product_id": str(product_id),
             "source": source,
@@ -126,4 +157,5 @@ class CatalogEbayProductsSource:
             "variants": [{"variant_id": str(variant_id)}] if variant_id else [],
             "catalog_price": price,
             "catalog_availability": availability or "",
+            "discontinued": bool(discontinued),
         }
