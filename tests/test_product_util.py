@@ -49,10 +49,10 @@ def test_build_coerces_string_numerics_to_json_numbers():
     assert isinstance(item["product_id"], int)
     assert isinstance(item["variant_id"], int)
     assert item["price"] == 29.99
-    assert item["quantity"] == 50.0
+    assert item["quantity"] == 50
     assert item["cost_price"] == 12.35
     assert isinstance(item["price"], float)
-    assert isinstance(item["quantity"], float)
+    assert isinstance(item["quantity"], int)
     assert isinstance(item["cost_price"], float)
 
 

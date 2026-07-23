@@ -9,13 +9,23 @@ class SpreeSetOffersError(RuntimeError):
 
 
 def _as_float(value, field_name):
-    """Spree 500s when price/quantity/cost_price are JSON strings."""
+    """Spree 500s when price/cost_price are JSON strings."""
     if value is None:
         raise ValueError("{} is required".format(field_name))
     try:
         return round(float(value), 2)
     except (TypeError, ValueError) as e:
         raise ValueError("{} must be numeric, got {!r}".format(field_name, value)) from e
+
+
+def _as_int(value, field_name):
+    """Inventory quantity must be a JSON integer (not a string)."""
+    if value is None:
+        raise ValueError("{} is required".format(field_name))
+    try:
+        return int(round(float(value)))
+    except (TypeError, ValueError) as e:
+        raise ValueError("{} must be an integer, got {!r}".format(field_name, value)) from e
 
 
 class ProductUtil:
@@ -81,7 +91,7 @@ class ProductUtil:
 
                 try:
                     price = _as_float(v_offer["price"], "price")
-                    quantity = _as_float(v_offer["quantity"], "quantity")
+                    quantity = _as_int(v_offer["quantity"], "quantity")
                 except (KeyError, ValueError) as e:
                     logger.warning(
                         "[InventoryUpdate] skip product_id=%s variant_id=%s: %s",
