@@ -1,0 +1,21 @@
+# Keep ~2 days of em-ebay-repricer cron logs (plan / apply / plan-apply).
+# Install on VPS:
+#   sudo cp scripts/logrotate.ebay_repricer /etc/logrotate.d/ebay_repricer
+# copytruncate: safe with cron ">> file 2>&1" appenders.
+/home/Admin/.em_celery/logs/ebay_repricer_plan_apply.log
+/home/Admin/.em_celery/logs/ebay_repricer_plan.log
+/home/Admin/.em_celery/logs/ebay_repricer_apply.log
+/home/Admin/.em_celery/logs/ebay_repricer_plan_cart_ads_catalog.log
+{
+    daily
+    rotate 2
+    maxage 2
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+    dateext
+    dateformat -%Y%m%d
+    su Admin Admin
+}

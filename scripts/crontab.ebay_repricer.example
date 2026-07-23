@@ -4,6 +4,7 @@
 #
 # Locks: ~/.em_celery/locks/ebay_repricer_plan_apply.lock
 # Logs:  ~/.em_celery/logs/ebay_repricer_plan_apply.log
+# Logrotate (VPS): sudo cp scripts/logrotate.ebay_repricer /etc/logrotate.d/ebay_repricer
 #
 # Schedule (server local time) — every 4h at :20 (stagger vs amz :00/:15/:30):
 
