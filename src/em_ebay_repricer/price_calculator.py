@@ -92,7 +92,7 @@ class PriceCalculator:
             "price": round(price, 2),
             "quantity": quantity,
             "currency": self.target_currency,
-            "src_price": src_price,
+            "src_price": round(src_price, 2),
             "src_currency": self.target_currency,
         }
 

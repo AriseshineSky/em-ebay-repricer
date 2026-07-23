@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import click
 
-from em_ebay_repricer.cli_common import run_reprice_command
+from em_ebay_repricer.reprice_command import run_reprice_command
 from em_ebay_repricer.repricer import EbayRepricer
 
 

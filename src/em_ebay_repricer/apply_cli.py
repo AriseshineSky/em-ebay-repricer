@@ -8,7 +8,7 @@ import datetime
 
 import click
 
-from em_ebay_repricer.cli_common import resolve_spree_credentials
+from em_ebay_repricer.reprice_command import resolve_spree_credentials
 from em_ebay_repricer.es_client import EsProductClient
 from em_ebay_repricer.metrics import save_repricer_metrics
 from em_ebay_repricer.pending_store import (

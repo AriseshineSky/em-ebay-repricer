@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Shared CLI bootstrap for live / plan Ebay repricer commands."""
+"""Live / plan Ebay reprice command helpers."""
 
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ def resolve_spree_credentials(cfg, store_code):
     return cred["endpoint"], cred["api_key"], cred.get("api_version", "v1")
 
 
-def build_common(
+def build_repricer_context(
     store_code,
     marketplace,
     tiers_arg,
@@ -147,7 +147,7 @@ def run_reprice_command(
     price_diff_threshold=None,
     plan=False,
 ):
-    common = build_common(
+    ctx = build_repricer_context(
         store_code=store_code,
         marketplace=marketplace,
         tiers_arg=tiers_arg,
@@ -168,11 +168,11 @@ def run_reprice_command(
     tier_stats = {}
     try:
         tier_stats = run_tiers(
-            tiers=common["tiers"],
-            marketplace=common["marketplace"],
-            catalog_source=common["catalog_source"],
+            tiers=ctx["tiers"],
+            marketplace=ctx["marketplace"],
+            catalog_source=ctx["catalog_source"],
             gcs_service_account_path=gcs_path,
-            repricer=common["repricer"],
+            repricer=ctx["repricer"],
             limit=limit,
         )
     except Exception as e:
@@ -181,21 +181,21 @@ def run_reprice_command(
     end = datetime.datetime.now(datetime.timezone.utc)
 
     save_repricer_metrics(
-        product_service=common["product_service"],
+        product_service=ctx["product_service"],
         store_code=store_code,
-        marketplace=common["marketplace"],
-        stats=common["repricer"].stats,
+        marketplace=ctx["marketplace"],
+        stats=ctx["repricer"].stats,
         start_time=start,
         end_time=end,
         tier_stats=tier_stats,
         error=error,
         dry_run=dry_run,
         plan=plan,
-        plan_run_id=common["plan_run_id"],
-        price_diff_threshold=common["threshold"],
-        tiers=common["tiers"],
+        plan_run_id=ctx["plan_run_id"],
+        price_diff_threshold=ctx["threshold"],
+        tiers=ctx["tiers"],
     )
-    stats = common["repricer"].stats
+    stats = ctx["repricer"].stats
     logger.info(
         "[EbayRepricerDone] mode=%s dry_run=%s products=%s planned=%s updated=%s "
         "skipped_fresh=%s skipped_price=%s filtered=%s missing_es=%s",
@@ -211,4 +211,4 @@ def run_reprice_command(
     )
     if error:
         raise click.ClickException(str(error))
-    return common
+    return ctx
