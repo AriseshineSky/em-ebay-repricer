@@ -1,0 +1,18 @@
+# Crontab for em-ebay-repricer (plan → apply).
+#
+# Does not replace legacy em-celery `spree_ebay_repricing.sh` — run alongside.
+#
+# Locks: ~/.em_celery/locks/ebay_repricer_plan_apply.lock
+# Logs:  ~/.em_celery/logs/ebay_repricer_plan_apply.log
+#
+# Schedule (server local time) — every 4h at :20 (stagger vs amz :00/:15/:30):
+
+SHELL=/bin/bash
+PATH=/home/Admin/.local/bin:/usr/local/bin:/usr/bin:/bin
+HOME=/home/Admin
+
+20 */4 * * * /home/Admin/scripts/em_ebay_repricer.sh plan-apply >> /home/Admin/.em_celery/logs/ebay_repricer_plan_apply.log 2>&1
+
+# Optional split (plan then apply later; apply reads whatever is still pending):
+# 10 */4 * * * /home/Admin/scripts/em_ebay_repricer.sh plan >> /home/Admin/.em_celery/logs/ebay_repricer_plan.log 2>&1
+# 50 */4 * * * /home/Admin/scripts/em_ebay_repricer.sh apply >> /home/Admin/.em_celery/logs/ebay_repricer_apply.log 2>&1

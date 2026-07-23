@@ -40,6 +40,10 @@ em-ebay-repricer-apply -s em-spree -m us
 # live (calc + set_offers in one process)
 em-ebay-repricer -s em-spree -m us --tiers cart,ads,catalog \
   -g ~/.em_celery/gcs-sa.json
+
+# VPS cron helpers (flock): plan → apply
+./scripts/ebay_repricer_plan_apply.sh
+# see scripts/crontab.ebay_repricer.example
 ```
 
 Config path: `EM_EBAY_REPRICER_CONFIG` or `~/.em_ebay_repricer/config.ini` or `./config.ini`.
