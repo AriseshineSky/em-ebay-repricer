@@ -138,3 +138,38 @@ def test_save_repricer_metrics_records_http_5xx_as_partial():
     assert doc["http_5xx_batches"] == 1
     assert doc["status"] == "partial"
     assert "500" in doc["error"]
+
+
+def test_save_repricer_metrics_apply_run():
+    service = MagicMock()
+    start = datetime.datetime(2026, 7, 24, 14, 0, 0)
+    end = datetime.datetime(2026, 7, 24, 14, 2, 30)
+    save_repricer_metrics(
+        product_service=service,
+        store_code="em-spree",
+        marketplace="us",
+        stats=_sample_stats(
+            planned_cnt=0,
+            updated_cnt=80,
+            failed_cnt=20,
+            http_5xx_cnt=20,
+            http_5xx_batches=2,
+        ),
+        start_time=start,
+        end_time=end,
+        apply=True,
+        tiers=None,
+        error="Spree set_offers failed: {'status': 502}",
+    )
+    doc = service.save_products.call_args[0][1][0]
+    assert doc["source"] == "ebay_repricer_apply"
+    assert doc["metric_kind"] == "apply"
+    assert doc["apply"] is True
+    assert doc["plan"] is False
+    assert doc["run_kind"] == "apply"
+    assert doc["tiers"] == []
+    assert doc["duration_ms"] == 150000
+    assert doc["http_5xx_cnt"] == 20
+    assert doc["http_5xx_batches"] == 2
+    assert doc["status"] == "partial"
+    assert doc["_id"].startswith("ebay_repricer_apply_us_apply_")

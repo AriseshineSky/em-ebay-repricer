@@ -43,6 +43,7 @@ def save_repricer_metrics(
     error=None,
     dry_run=False,
     plan=False,
+    apply=False,
     plan_run_id=None,
     price_diff_threshold=DEFAULT_PRICE_DIFF_THRESHOLD,
     tiers=None,
@@ -85,23 +86,32 @@ def save_repricer_metrics(
         ordered_tiers = normalize_tiers(tiers)
         if not ordered_tiers and isinstance(tier_stats, dict) and tier_stats:
             ordered_tiers = normalize_tiers(tier_stats.keys())
-        run_kind = run_kind_for_tiers(ordered_tiers)
 
         is_dry_run = bool(dry_run)
-        is_plan = bool(plan) and not is_dry_run
-        if is_plan:
+        is_plan = bool(plan) and not is_dry_run and not bool(apply)
+        is_apply = bool(apply) and not is_plan
+        if is_apply:
+            source = "ebay_repricer_apply"
+            id_prefix = "ebay_repricer_apply"
+            run_kind = "apply"
+            metric_kind = "precheck" if is_dry_run else "apply"
+            change_cnt = updated_cnt
+        elif is_plan:
             source = "ebay_repricer_plan"
             id_prefix = "ebay_repricer_plan"
+            run_kind = run_kind_for_tiers(ordered_tiers)
             metric_kind = "plan"
             change_cnt = planned_cnt
         elif is_dry_run:
             source = "ebay_repricer_dry_run"
             id_prefix = "ebay_repricer_dry_run"
+            run_kind = run_kind_for_tiers(ordered_tiers)
             metric_kind = "precheck"
             change_cnt = planned_cnt or updated_cnt
         else:
             source = "ebay_repricer"
             id_prefix = "ebay_repricer"
+            run_kind = run_kind_for_tiers(ordered_tiers)
             metric_kind = "final"
             change_cnt = updated_cnt
 
@@ -128,7 +138,8 @@ def save_repricer_metrics(
             "tiers": ordered_tiers,
             "run_kind": run_kind,
             "dry_run": is_dry_run,
-            "plan": is_plan,
+            "plan": bool(plan) and not is_apply,
+            "apply": is_apply,
             "metric_kind": metric_kind,
             "timestamp": now_utc.isoformat(),
             "started_at": started_at.isoformat(),
