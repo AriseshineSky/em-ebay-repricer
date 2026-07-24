@@ -20,7 +20,7 @@ from em_ebay_repricer.pending_store import (
     pending_hit_to_product,
 )
 from em_ebay_repricer.runtime import get_config, logger
-from em_ebay_repricer.spree.product_util import ProductUtil
+from em_ebay_repricer.spree.product_util import ProductUtil, SpreeSetOffersError
 
 
 @click.command("em-ebay-repricer-apply")
@@ -64,13 +64,16 @@ def apply_prices(
         "skipped_price": 0,
         "skipped_fresh": 0,
         "failed_cnt": 0,
+        "http_5xx_cnt": 0,
+        "http_5xx_batches": 0,
     }
     error = None
+    last_5xx_error = None
     batch = {}
     batch_ids = []
 
     def flush():
-        nonlocal batch, batch_ids
+        nonlocal batch, batch_ids, last_5xx_error
         if not batch:
             return
         if dry_run:
@@ -91,6 +94,22 @@ def apply_prices(
             product_util.set_products_offer(batch, None)
             mark_pending_status(product_service, batch_ids, STATUS_APPLIED)
             stats["updated_cnt"] += len(batch)
+        except SpreeSetOffersError as e:
+            logger.exception(e)
+            mark_pending_status(
+                product_service, batch_ids, STATUS_FAILED, error=str(e)[:500]
+            )
+            n = len(batch)
+            stats["failed_cnt"] += n
+            if e.is_5xx:
+                stats["http_5xx_cnt"] += n
+                stats["http_5xx_batches"] += 1
+                last_5xx_error = str(e)[:500]
+                logger.error(
+                    "[EbayRepricerApply] Spree HTTP %s for %s products in batch",
+                    e.status,
+                    n,
+                )
         except Exception as e:
             logger.exception(e)
             mark_pending_status(
@@ -124,6 +143,10 @@ def apply_prices(
         logger.exception(e)
 
     end = datetime.datetime.now(datetime.timezone.utc)
+    # Surface last Spree 5xx on the run when batches failed but the process continued.
+    metrics_error = error or (
+        last_5xx_error if stats["http_5xx_cnt"] and not dry_run else None
+    )
     save_repricer_metrics(
         product_service=product_service,
         store_code=store_code,
@@ -132,17 +155,19 @@ def apply_prices(
         start_time=start,
         end_time=end,
         tier_stats={},
-        error=error,
+        error=metrics_error,
         dry_run=dry_run,
         plan=False,
         tiers=["cart", "ads", "catalog"],
     )
     logger.info(
-        "[EbayRepricerApplyDone] dry_run=%s seen=%s updated=%s failed=%s",
+        "[EbayRepricerApplyDone] dry_run=%s seen=%s updated=%s failed=%s http_5xx=%s http_5xx_batches=%s",
         dry_run,
         stats["products_cnt"],
         stats["updated_cnt"],
         stats["failed_cnt"],
+        stats["http_5xx_cnt"],
+        stats["http_5xx_batches"],
     )
     if error:
         raise click.ClickException(str(error))

@@ -27,6 +27,7 @@ from em_ebay_repricer.pending_store import (
     save_pending_docs,
 )
 from em_ebay_repricer.runtime import logger
+from em_ebay_repricer.spree.product_util import SpreeSetOffersError
 
 
 class EbayRepricer:
@@ -81,6 +82,9 @@ class EbayRepricer:
             "skipped_discontinued": 0,
             "skipped_price": 0,
             "skipped_fresh": 0,
+            "failed_cnt": 0,
+            "http_5xx_cnt": 0,
+            "http_5xx_batches": 0,
         }
 
     def process_batch(self, products_by_ebay_id, tier=None):
@@ -194,8 +198,16 @@ class EbayRepricer:
         try:
             self.product_util.set_products_offer(to_spree, None)
             self.stats["updated_cnt"] += len(to_spree)
+        except SpreeSetOffersError as e:
+            logger.exception(e)
+            n = len(to_spree)
+            self.stats["failed_cnt"] += n
+            if e.is_5xx:
+                self.stats["http_5xx_cnt"] += n
+                self.stats["http_5xx_batches"] += 1
         except Exception as e:
             logger.exception(e)
+            self.stats["failed_cnt"] += len(to_spree)
 
     def _fetch_es(self, ebay_ids):
         max_retries = 3

@@ -62,5 +62,24 @@ def test_set_offers_500_raises_so_apply_can_mark_failed():
         "status": 500,
         "error": "Internal Server Error",
     }
-    with pytest.raises(SpreeSetOffersError):
+    with pytest.raises(SpreeSetOffersError) as exc_info:
         util.set_products_offer({"100": _prod()})
+    assert exc_info.value.status == 500
+    assert exc_info.value.is_5xx is True
+
+
+def test_set_offers_503_is_5xx():
+    util = _util()
+    util.spree_api.set_offers.return_value = {"status": 503, "error": "Unavailable"}
+    with pytest.raises(SpreeSetOffersError) as exc_info:
+        util.set_products_offer({"100": _prod()})
+    assert exc_info.value.is_5xx is True
+
+
+def test_set_offers_400_is_not_5xx():
+    util = _util()
+    util.spree_api.set_offers.return_value = {"status": 400, "error": "Bad Request"}
+    with pytest.raises(SpreeSetOffersError) as exc_info:
+        util.set_products_offer({"100": _prod()})
+    assert exc_info.value.status == 400
+    assert exc_info.value.is_5xx is False

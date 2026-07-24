@@ -124,6 +124,13 @@ Notes:
 Dashboard reads `ebay_repricer_metrics` (`source` = `ebay_repricer` / `ebay_repricer_plan`,  
 `metric_kind` = `final` / `plan`). Env: `ES_EBAY_REPRICER_METRICS_INDEXES`.
 
+Apply metrics include `failed_cnt` (products that failed Spree apply), `http_5xx_cnt`
+(products in batches that got HTTP 5xx), and `http_5xx_batches` (5xx response count per run).
+Partial Spree failures set `status=partial` and keep the last 5xx message in `error`.
+
+The monitoring dashboard **5xx 24h** column sums `http_5xx_batches` across apply runs
+finished in the last 24 hours (`source=ebay_repricer`).
+
 ## Examples
 
 ```bash

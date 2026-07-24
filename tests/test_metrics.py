@@ -106,3 +106,35 @@ def test_save_repricer_metrics_apply_all_tiers_is_run_kind_all():
     assert doc["metric_kind"] == "final"
     assert doc["run_kind"] == "all"
     assert doc["updated_cnt"] == 53
+    assert doc["failed_cnt"] == 0
+    assert doc["http_5xx_cnt"] == 0
+    assert doc["status"] == "finished"
+
+
+def test_save_repricer_metrics_records_http_5xx_as_partial():
+    service = MagicMock()
+    start = datetime.datetime(2026, 7, 21, 18, 0, 0)
+    end = datetime.datetime(2026, 7, 21, 18, 0, 1)
+    save_repricer_metrics(
+        product_service=service,
+        store_code="em-spree",
+        marketplace="us",
+        stats=_sample_stats(
+            planned_cnt=0,
+            updated_cnt=100,
+            failed_cnt=250,
+            http_5xx_cnt=250,
+            http_5xx_batches=1,
+        ),
+        start_time=start,
+        end_time=end,
+        plan=False,
+        tiers=["cart", "ads", "catalog"],
+        error="Spree set_offers failed: {'status': 500}",
+    )
+    doc = service.save_products.call_args[0][1][0]
+    assert doc["failed_cnt"] == 250
+    assert doc["http_5xx_cnt"] == 250
+    assert doc["http_5xx_batches"] == 1
+    assert doc["status"] == "partial"
+    assert "500" in doc["error"]

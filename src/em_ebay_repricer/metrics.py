@@ -69,6 +69,9 @@ def save_repricer_metrics(
         skipped_incomplete = int(stats.get("skipped_incomplete", 0) or 0)
         skipped_discontinued = int(stats.get("skipped_discontinued", 0) or 0)
         expired_cnt = int(stats.get("expired_cnt", 0) or 0)
+        failed_cnt = int(stats.get("failed_cnt", 0) or 0)
+        http_5xx_cnt = int(stats.get("http_5xx_cnt", 0) or 0)
+        http_5xx_batches = int(stats.get("http_5xx_batches", 0) or 0)
         in_stock = int(stats.get("in_stock", 0) or 0)
         out_of_stock = int(stats.get("out_of_stock", 0) or 0)
         missing_es = int(stats.get("missing_es", 0) or 0)
@@ -102,6 +105,14 @@ def save_repricer_metrics(
             metric_kind = "final"
             change_cnt = updated_cnt
 
+        error_text = str(error) if error else None
+        if error_text and failed_cnt <= 0 and http_5xx_cnt <= 0:
+            run_status = "failed"
+        elif failed_cnt > 0 or http_5xx_cnt > 0:
+            run_status = "partial"
+        else:
+            run_status = "finished"
+
         metric_doc = {
             "_id": "{}_{}_{}_{}_{}".format(
                 id_prefix,
@@ -131,21 +142,33 @@ def save_repricer_metrics(
             "skipped_incomplete": skipped_incomplete,
             "skipped_discontinued": skipped_discontinued,
             "expired_cnt": expired_cnt,
+            "failed_cnt": failed_cnt,
+            "http_5xx_cnt": http_5xx_cnt,
+            "http_5xx_batches": http_5xx_batches,
             "in_stock": in_stock,
             "out_of_stock": out_of_stock,
             "missing_es": missing_es,
             "filtered": filtered,
             "filtered_cnt": filtered_cnt,
             "tier_stats": tier_stats or {},
-            "error": str(error) if error else None,
-            "status": "failed" if error else "finished",
+            "error": error_text,
+            "status": run_status,
             "price_diff_threshold": float(price_diff_threshold),
             "price_change_cnt": change_cnt,
             "unchanged_price_cnt": skipped_price,
-            "success_cnt": max(products_cnt - skipped_incomplete - skipped_discontinued, 0),
+            "success_cnt": max(
+                products_cnt - skipped_incomplete - skipped_discontinued - failed_cnt,
+                0,
+            ),
             "success_rate_pct": round(
                 (
-                    max(products_cnt - skipped_incomplete - skipped_discontinued, 0)
+                    max(
+                        products_cnt
+                        - skipped_incomplete
+                        - skipped_discontinued
+                        - failed_cnt,
+                        0,
+                    )
                     * 100.0
                     / products_cnt
                 ),

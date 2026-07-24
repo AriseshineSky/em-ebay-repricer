@@ -7,6 +7,27 @@ from em_ebay_repricer.spree.api import SpreeApi
 class SpreeSetOffersError(RuntimeError):
     """Raised when Spree set_offers returns a non-success response."""
 
+    def __init__(self, message, status=None, response=None):
+        super().__init__(message)
+        self.status = status
+        self.response = response
+
+    @property
+    def is_5xx(self):
+        return isinstance(self.status, int) and 500 <= self.status <= 599
+
+
+def _http_status_from_resp(resp):
+    if not isinstance(resp, dict):
+        return None
+    status = resp.get("status")
+    if isinstance(status, int):
+        return status
+    try:
+        return int(status)
+    except (TypeError, ValueError):
+        return None
+
 
 def _as_float(value, field_name):
     """Spree 500s when price/cost_price are JSON strings."""
@@ -132,14 +153,20 @@ class ProductUtil:
         if not store_offers:
             return store_offers
         resp = self.spree_api.set_offers(store_offers)
-        if isinstance(resp, dict) and (
-            resp.get("status") == 500
-            or (isinstance(resp.get("status"), int) and resp["status"] >= 400)
-        ):
+        status = _http_status_from_resp(resp)
+        if status is not None and status >= 400:
             logger.error("[InventoryUpdated] Spree set_offers failed: %s", resp)
-            raise SpreeSetOffersError("Spree set_offers failed: {}".format(resp))
+            raise SpreeSetOffersError(
+                "Spree set_offers failed: {}".format(resp),
+                status=status,
+                response=resp,
+            )
         if isinstance(resp, dict) and resp.get("succeed") is False:
             logger.error("[InventoryUpdated] Spree set_offers rejected: %s", resp)
-            raise SpreeSetOffersError("Spree set_offers rejected: {}".format(resp))
+            raise SpreeSetOffersError(
+                "Spree set_offers rejected: {}".format(resp),
+                status=status,
+                response=resp,
+            )
         logger.info("[InventoryUpdated] %s", resp)
         return store_offers
