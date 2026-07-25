@@ -8,8 +8,10 @@
 #   plan:  ~/.em_celery/locks/ebay_repricer_plan_{cart,ads,catalog}.lock
 #   apply: ~/.em_celery/locks/ebay_repricer_apply.lock
 #
-# Logs:  /tmp/ebay_repricer_*.log  (/tmp is a separate disk on VPS)
-# Logrotate (VPS): sudo cp scripts/logrotate.ebay_repricer /etc/logrotate.d/ebay_repricer
+# Logs:  /data/logs/ebay_repricer_*.log
+#   (/data is a bind mount of /tmp/persistent on the sdb1 volume; survives /tmp cleanup)
+# Logrotate (VPS): sudo cp scripts/logrotate.ebay_repricer /etc/logrotate.d/em_data_logs
+#   (or use the unified /etc/logrotate.d/em_data_logs covering /data/logs/*.log)
 #
 # Schedule (server local time) — every 4h; three plans start together; apply independent:
 
@@ -17,10 +19,10 @@ SHELL=/bin/bash
 PATH=/home/Admin/.local/bin:/usr/local/bin:/usr/bin:/bin
 HOME=/home/Admin
 
-20 */4 * * * /home/Admin/scripts/em_ebay_repricer.sh plan cart >> /tmp/ebay_repricer_plan_cart.log 2>&1
-20 */4 * * * /home/Admin/scripts/em_ebay_repricer.sh plan ads >> /tmp/ebay_repricer_plan_ads.log 2>&1
-20 */4 * * * /home/Admin/scripts/em_ebay_repricer.sh plan catalog >> /tmp/ebay_repricer_plan_catalog.log 2>&1
-50 */4 * * * /home/Admin/scripts/em_ebay_repricer.sh apply >> /tmp/ebay_repricer_apply.log 2>&1
+20 */4 * * * /home/Admin/scripts/em_ebay_repricer.sh plan cart >> /data/logs/ebay_repricer_plan_cart.log 2>&1
+20 */4 * * * /home/Admin/scripts/em_ebay_repricer.sh plan ads >> /data/logs/ebay_repricer_plan_ads.log 2>&1
+20 */4 * * * /home/Admin/scripts/em_ebay_repricer.sh plan catalog >> /data/logs/ebay_repricer_plan_catalog.log 2>&1
+50 */4 * * * /home/Admin/scripts/em_ebay_repricer.sh apply >> /data/logs/ebay_repricer_apply.log 2>&1
 
 # Deprecated (sequential plan then apply under one lock):
-# 20 */4 * * * /home/Admin/scripts/em_ebay_repricer.sh plan-apply >> /tmp/ebay_repricer_plan_apply.log 2>&1
+# 20 */4 * * * /home/Admin/scripts/em_ebay_repricer.sh plan-apply >> /data/logs/ebay_repricer_plan_apply.log 2>&1

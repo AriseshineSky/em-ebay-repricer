@@ -1,13 +1,13 @@
-# Keep ~2 days of em-ebay-repricer cron logs under /tmp (separate disk).
-# Install on VPS:
+# em-ebay-repricer cron logs under /data/logs (sdb1 via /tmp/persistent bind).
+# Prefer the unified VPS file /etc/logrotate.d/em_data_logs for all /data/logs/*.log.
+# Install (ebay-only):
 #   sudo cp scripts/logrotate.ebay_repricer /etc/logrotate.d/ebay_repricer
 # copytruncate: safe with cron ">> file 2>&1" appenders.
-# su: required because /tmp is world-writable.
-/tmp/ebay_repricer_*.log
+/data/logs/ebay_repricer_*.log
 {
     daily
-    rotate 2
-    maxage 2
+    rotate 3
+    maxage 3
     missingok
     notifempty
     compress
