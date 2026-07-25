@@ -41,8 +41,12 @@ em-ebay-repricer-apply -s em-spree -m us
 em-ebay-repricer -s em-spree -m us --tiers cart,ads,catalog \
   -g ~/.em_celery/gcs-sa.json
 
-# VPS cron helpers (flock): plan → apply
-./scripts/ebay_repricer_plan_apply.sh
+# VPS cron helpers (flock): parallel plan per tier + separate apply
+./scripts/ebay_repricer_plan.sh cart
+./scripts/ebay_repricer_plan.sh ads
+./scripts/ebay_repricer_plan.sh catalog
+./scripts/ebay_repricer_apply.sh
+# install scripts/em_ebay_repricer.vps.sh → /home/Admin/scripts/em_ebay_repricer.sh
 # see scripts/crontab.ebay_repricer.example
 ```
 

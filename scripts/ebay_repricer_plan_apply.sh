@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# Cron entry: plan (cart/ads/catalog) then apply. One flock for the whole chain.
+# DEPRECATED: prefer parallel per-tier plan + separate apply cron.
+# See scripts/crontab.ebay_repricer.example and scripts/em_ebay_repricer.vps.sh.
+#
+# Legacy: plan (cart/ads/catalog sequentially) then apply. One flock for the whole chain.
 #
 #   ./scripts/ebay_repricer_plan_apply.sh
 #   ./scripts/ebay_repricer_plan_apply.sh --limit 100   # forwarded to plan only
@@ -7,6 +10,8 @@
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+echo "[ebay_repricer] WARNING: ebay_repricer_plan_apply.sh is deprecated; use plan <tier> + apply" >&2
 
 export PATH="${HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin:${PATH}"
 STORE_CODE="${STORE_CODE:-em-spree}"

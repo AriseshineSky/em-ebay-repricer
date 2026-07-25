@@ -18,7 +18,7 @@ Standalone Ebay Spree repricer with **plan → apply** split.
 | ads | GCS `em-analytics/sources/EBAY_{MP}.txt` |
 | catalog | PG `product_sources` + `product_catalogs` (skip discontinued) |
 
-Order: `cart → ads → catalog`.
+Order: historically sequential `cart → ads → catalog`. Production cron runs **one plan process per tier in parallel** (independent flock); apply is a separate cron.
 
 ## Indexes
 
@@ -137,6 +137,21 @@ Partial Spree failures set `status=partial` and keep the last 5xx message in `er
 
 The monitoring dashboard **eBay Repricer Apply** panel shows Started / Duration / Done and
 **5xx 24h** (sum of `http_5xx_batches` over apply runs finished in the last 24 hours).
+
+## Cron (VPS)
+
+Install wrapper: `scripts/em_ebay_repricer.vps.sh` → `/home/Admin/scripts/em_ebay_repricer.sh`.  
+See [`scripts/crontab.ebay_repricer.example`](../scripts/crontab.ebay_repricer.example).
+
+```bash
+# parallel plan (one process / flock per tier)
+./scripts/ebay_repricer_plan.sh cart
+./scripts/ebay_repricer_plan.sh ads
+./scripts/ebay_repricer_plan.sh catalog
+
+# independent apply (pending + failed)
+./scripts/ebay_repricer_apply.sh
+```
 
 ## Examples
 
