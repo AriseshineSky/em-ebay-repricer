@@ -7,7 +7,7 @@ Standalone Ebay Spree repricer with **plan → apply** split.
 | Command | Spree? | Writes |
 |---------|--------|--------|
 | `em-ebay-repricer-plan` | No | `ebay_repricer_pending` + `ebay_repricer_metrics` |
-| `em-ebay-repricer-apply` | Yes | `set_offers`; marks pending `applied`/`failed` |
+| `em-ebay-repricer-apply` | Yes | `set_offers`; marks pending `applied`/`failed`; retries `pending` **and** `failed` by default |
 | `em-ebay-repricer` | Yes (live) | pending state + immediate `set_offers` |
 
 ## Data sources (tiers)

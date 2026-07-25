@@ -22,6 +22,9 @@ STATUS_SKIPPED_PRICE = "skipped_price"
 STATUS_SKIPPED_FRESH = "skipped_fresh"
 STATUS_FILTERED = "filtered"
 
+# Apply retries Spree failures as well as fresh pending rows.
+APPLY_STATUSES = (STATUS_PENDING, STATUS_FAILED)
+
 PENDING_MAPPINGS = {
     "properties": {
         "status": {"type": "keyword"},
@@ -177,19 +180,47 @@ def mget_pending(service, store_code, marketplace, product_ids):
     return service.search_products(PENDING_INDEX, ids)
 
 
+def normalize_apply_statuses(status=None):
+    """Normalize status / statuses for ES filter (term or terms)."""
+    if status is None:
+        return list(APPLY_STATUSES)
+    if isinstance(status, (list, tuple, set)):
+        values = [str(s).strip() for s in status if str(s).strip()]
+    else:
+        values = [str(status).strip()] if str(status).strip() else []
+    if not values:
+        return list(APPLY_STATUSES)
+    # Preserve order, drop duplicates.
+    seen = set()
+    out = []
+    for value in values:
+        if value not in seen:
+            seen.add(value)
+            out.append(value)
+    return out
+
+
+def _status_filter(statuses):
+    if len(statuses) == 1:
+        return {"term": {"status": statuses[0]}}
+    return {"terms": {"status": statuses}}
+
+
 def iter_pending_docs(
     service,
     store_code,
     marketplace,
     limit=0,
-    status=STATUS_PENDING,
+    status=None,
     batch_size=100,
 ):
+    """Yield pending ES hits for apply (default: pending + failed)."""
     fetched = 0
+    statuses = normalize_apply_statuses(status)
     query = {
         "bool": {
             "filter": [
-                {"term": {"status": status}},
+                _status_filter(statuses),
                 {"term": {"store_code": store_code}},
                 {"term": {"marketplace": marketplace.lower()}},
             ]

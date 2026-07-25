@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 
 from em_ebay_repricer.pending_store import (
+    APPLY_STATUSES,
+    STATUS_FAILED,
     STATUS_PENDING,
     STATUS_SKIPPED_PRICE,
     build_pending_doc,
     build_tier_only_patch,
+    iter_pending_docs,
+    normalize_apply_statuses,
     pending_doc_id,
     pending_hit_to_product,
 )
@@ -104,3 +108,43 @@ def test_pending_hit_to_product():
     assert prod["handle"] == "demo"
     assert prod["source_product_id"] == "123456789012"
     assert prod["offer"]["price"] == 20.0
+
+
+def test_normalize_apply_statuses_defaults_to_pending_and_failed():
+    assert normalize_apply_statuses(None) == list(APPLY_STATUSES)
+    assert normalize_apply_statuses([]) == list(APPLY_STATUSES)
+    assert normalize_apply_statuses("failed") == [STATUS_FAILED]
+    assert normalize_apply_statuses(["pending", "failed", "pending"]) == [
+        STATUS_PENDING,
+        STATUS_FAILED,
+    ]
+
+
+def test_iter_pending_docs_queries_pending_and_failed_by_default():
+    class FakeService:
+        def __init__(self):
+            self.query = None
+
+        def scan(self, index, query=None, size=100):
+            self.query = query
+            return iter([])
+
+    service = FakeService()
+    list(iter_pending_docs(service, "em-spree", "us"))
+    assert service.query["bool"]["filter"][0] == {
+        "terms": {"status": [STATUS_PENDING, STATUS_FAILED]}
+    }
+
+
+def test_iter_pending_docs_single_status_uses_term():
+    class FakeService:
+        def __init__(self):
+            self.query = None
+
+        def scan(self, index, query=None, size=100):
+            self.query = query
+            return iter([])
+
+    service = FakeService()
+    list(iter_pending_docs(service, "em-spree", "us", status=STATUS_FAILED))
+    assert service.query["bool"]["filter"][0] == {"term": {"status": STATUS_FAILED}}

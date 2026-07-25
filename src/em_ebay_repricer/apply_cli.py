@@ -12,9 +12,9 @@ from em_ebay_repricer.reprice_command import resolve_spree_credentials
 from em_ebay_repricer.es_client import EsProductClient
 from em_ebay_repricer.metrics import save_repricer_metrics
 from em_ebay_repricer.pending_store import (
+    APPLY_STATUSES,
     STATUS_APPLIED,
     STATUS_FAILED,
-    STATUS_PENDING,
     iter_pending_docs,
     mark_pending_status,
     pending_hit_to_product,
@@ -28,6 +28,13 @@ from em_ebay_repricer.spree.product_util import ProductUtil, SpreeSetOffersError
 @click.option("-m", "--marketplace", type=str, default="us", show_default=True)
 @click.option("--limit", type=int, default=0, help="Max pending docs (0 = all).")
 @click.option("--batch-size", type=int, default=250, show_default=True)
+@click.option(
+    "--statuses",
+    type=str,
+    default=",".join(APPLY_STATUSES),
+    show_default=True,
+    help="Comma-separated pending statuses to apply (e.g. pending,failed).",
+)
 @click.option("--dry-run", is_flag=True, help="List pending without Spree/status updates.")
 @click.option("--config", "config_path", type=str, default=None)
 def apply_prices(
@@ -35,10 +42,11 @@ def apply_prices(
     marketplace="us",
     limit=0,
     batch_size=250,
+    statuses=",".join(APPLY_STATUSES),
     dry_run=False,
     config_path=None,
 ):
-    """Read status=pending docs and push to Spree set_offers."""
+    """Read pending/failed docs and push to Spree set_offers."""
     marketplace = marketplace.lower()
     cfg = get_config(config_path)
     product_cfg = cfg.get("product_service")
@@ -119,13 +127,14 @@ def apply_prices(
         batch = {}
         batch_ids = []
 
+    status_list = [s.strip() for s in (statuses or "").split(",") if s.strip()]
     try:
         for hit in iter_pending_docs(
             product_service,
             store_code,
             marketplace,
             limit=limit,
-            status=STATUS_PENDING,
+            status=status_list or None,
             batch_size=batch_size,
         ):
             stats["products_cnt"] += 1
