@@ -75,6 +75,13 @@ def save_repricer_metrics(
         http_5xx_batches = int(stats.get("http_5xx_batches", 0) or 0)
         in_stock = int(stats.get("in_stock", 0) or 0)
         out_of_stock = int(stats.get("out_of_stock", 0) or 0)
+        classified_stock = in_stock + out_of_stock
+        oos_rate_pct = (
+            round(out_of_stock * 100.0 / classified_stock, 2) if classified_stock else 0.0
+        )
+        in_stock_rate_pct = (
+            round(in_stock * 100.0 / classified_stock, 2) if classified_stock else 0.0
+        )
         missing_es = int(stats.get("missing_es", 0) or 0)
         filtered = stats.get("filtered") or {}
         if not isinstance(filtered, dict):
@@ -158,6 +165,8 @@ def save_repricer_metrics(
             "http_5xx_batches": http_5xx_batches,
             "in_stock": in_stock,
             "out_of_stock": out_of_stock,
+            "oos_rate_pct": oos_rate_pct,
+            "in_stock_rate_pct": in_stock_rate_pct,
             "missing_es": missing_es,
             "filtered": filtered,
             "filtered_cnt": filtered_cnt,

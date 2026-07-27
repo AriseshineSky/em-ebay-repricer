@@ -84,6 +84,10 @@ def test_save_repricer_metrics_plan_run():
     assert doc["plan_run_id"] == "abc123"
     assert doc["filtered_cnt"] == 1
     assert doc["filtered"] == {"NotAvailable": 1}
+    assert doc["in_stock"] == 8
+    assert doc["out_of_stock"] == 1
+    assert doc["oos_rate_pct"] == 11.11
+    assert doc["in_stock_rate_pct"] == 88.89
     assert doc["_id"].startswith("ebay_repricer_plan_us_ads_")
 
 

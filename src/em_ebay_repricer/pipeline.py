@@ -50,6 +50,10 @@ def _snapshot_stats(repricer):
         "skipped_fresh": int(repricer.stats.get("skipped_fresh", 0) or 0),
         "skipped_incomplete": int(repricer.stats.get("skipped_incomplete", 0) or 0),
         "skipped_discontinued": int(repricer.stats.get("skipped_discontinued", 0) or 0),
+        "in_stock": int(repricer.stats.get("in_stock", 0) or 0),
+        "out_of_stock": int(repricer.stats.get("out_of_stock", 0) or 0),
+        "filtered_cnt": int(repricer.stats.get("filtered_cnt", 0) or 0),
+        "expired_cnt": int(repricer.stats.get("expired_cnt", 0) or 0),
     }
 
 
@@ -194,6 +198,10 @@ def run_tiers(
             "planned_cnt": after["planned_cnt"] - before["planned_cnt"],
             "skipped_price": after["skipped_price"] - before["skipped_price"],
             "skipped_fresh": after["skipped_fresh"] - before["skipped_fresh"],
+            "in_stock": after["in_stock"] - before["in_stock"],
+            "out_of_stock": after["out_of_stock"] - before["out_of_stock"],
+            "filtered_cnt": after["filtered_cnt"] - before["filtered_cnt"],
+            "expired_cnt": after["expired_cnt"] - before["expired_cnt"],
         }
         logger.info("[TierDone] %s processed~=%s stats=%s", tier, processed, tier_stats[tier])
 
